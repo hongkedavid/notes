@@ -1,0 +1,13 @@
+# Ref from https://stackoverflow.com/questions/11260761/is-gc-for-alloc-more-serious-when-investigating-memory-usage
+
+In a sense, GC_FOR_ALLOC is more serious than GC_CONCURRENT, because GC_FOR_ALLOC means there were not enough free memory to fulfill an allocation request, so a garbage collection was necessary, whereas GC_CONCURRENT just means that the GC felt like running, typically because the amount of free memory became lower than a certain threshold after an allocation.
+
+A GC_FOR_ALLOC is by itself not a sign of a problem in your application however:
+
+Android applications start with a small heap which grows (up to a point) when applications require more and more memory, and a GC_FOR_ALLOC is done before increasing the size of the heap. In this case GC_FOR_ALLOC is perfectly normal.
+If you allocate memory faster than the concurrent GC has time to free it up, GC_FOR_ALLOC is inevitable. And there's nothing inherently wrong with allocating memory faster than the concurrent GC can free up memory.
+A more serious type of GC on Android is GC_BEFORE_OOM, which is performed when an allocation request fails even after GC_FOR_ALLOC and when the application heap has grown as big as it is allowed to be. When this happen, as a last resort, Dalvik will try to release SoftReferences as well, before doing a final attempt at allocating memory and if that fails throw an OutOfMemory exception.
+
+If you're curious to look at the code for this logic, it is in tryMalloc() in dalvik.git/vm/alloc/Heap.cpp
+
+Anyway, if you don't mind, I doubt that looking at logcat output is the most efficient way to debug your garbage collection problems. I don't know what specific problem you are having, but have you looked into tools such as the Allocation Tracker in DDMS and analyzing heap dumps with the help of the hprof-conv tool? (See http://android-developers.blogspot.se/2011/03/memory-analysis-for-android.html for example to get started.)
