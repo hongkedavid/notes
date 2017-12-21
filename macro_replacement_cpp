@@ -2,7 +2,14 @@ Ref: http://en.cppreference.com/w/cpp/preprocessor/replace
 
 The preprocessor supports text macro replacement. Function-like text macro replacement is also supported. 
 
-## #define directives
+Syntax
+#define identifier replacement-list(optional)	(1)	
+#define identifier( parameters ) replacement-list(optional)	(2)	
+#define identifier( parameters, ... ) replacement-list(optional)	(3)	(since C++11)
+#define identifier( ... ) replacement-list(optional)	(4)	(since C++11)
+#undef identifier	(5)	
+
+#define directives
 The #define directives define the identifier as macro, that is instruct the compiler to replace all successive occurrences of identifier with replacement-list, which can be optionally additionally processed. If the identifier is already defined as any type of macro, the program is ill-formed unless the definitions are identical.
 
 Object-like macros
@@ -10,6 +17,25 @@ Object-like macros replace every occurrence of defined identifier with replaceme
 
 Function-like macros
 Function-like macros replace each occurrence of defined identifier with replacement-list, additionally taking a number of arguments, which then replace corresponding occurrences of any of the parameters in the replacement-list.
+
+The syntax of a function-like macro invocation is similar to the syntax of a function call: each instance of the macro name followed by a ( as the next preprocessing token introduces the sequence of tokens that is replaced by the replacement-list. The sequence is terminated by the matching ) token, skipping intervening matched pairs of left and right parentheses.
+For version (2), the number of arguments must be the same as the number of parameters in macro definition. For versions (3,4), the number of arguments must be more than (until C++20)at least as many as (since C++20) the number of parameters (not counting ...). Otherwise the program is ill-formed. If the identifier is not in functional-notation, i.e. does not have parentheses after itself, it is not replaced at all.
+Version (2) of the #define directive defines a simple function-like macro.
+Version (3) of the #define directive defines a function-like macro with variable number of arguments. The additional arguments (called variable arguments) can be accessed using __VA_ARGS__ identifier, which is then replaced with arguments, supplied with the identifier to be replaced.
+Version (4) of the #define directive defines a function-like macro with variable number of arguments, but no regular arguments. The arguments (called variable arguments) can be accessed only with __VA_ARGS__ identifier, which is then replaced with arguments, supplied with identifier to be replaced.
+For versions (3,4), replacement-list may contain the token sequence __VA_OPT__ ( content ), which is replaced by content if __VA_ARGS__ is non-empty, and expands to nothing otherwise.
+
+Example
+#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)
+#define G(X, ...) f(0, X __VA_OPT__(,) __VA_ARGS__)
+#define SDEF(sname, ...) S sname __VA_OPT__(= { __VA_ARGS__ })
+F(a, b, c) // replaced by f(0, a, b, c)
+F()        // replaced by f(0)
+G(a, b, c) // replaced by f(0, a, b, c)
+G(a, )     // replaced by f(0, a)
+G(a)       // replaced by f(0, a)
+SDEF(foo);       // replaced by S foo;
+SDEF(bar, 1, 2); // replaced by S bar = { 1, 2 };
 
 # and ## operators
 In function-like macros, a # operator before an identifier in the replacement-list runs the identifier through parameter replacement and encloses the result in quotes, effectively creating a string literal. In addition, the preprocessor adds backslashes to escape the quotes surrounding embedded string literals, if any, and doubles the backslashes within the string as necessary. All leading and trailing whitespace is removed, and any sequence of whitespace in the middle of the text (but not inside embedded string literals) is collapsed to a single space. This operation is called "stringification". If the result of stringification is not a valid string literal, the behavior is undefined.
